@@ -1,5 +1,5 @@
-# Ore Pool Cli
- Ore V2 Pool client coded in Rust. Fork of Ore Cli modified for pools
+# Ore Pool Miner
+ Ore Pool Miner coded in Rust for the Ore v2 program on Solana
 
 ### Default Ore Mining Pool
 Alvarium Mining Pool is operated by Bifrost and is the default pool option for the mining client.
