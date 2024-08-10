@@ -31,6 +31,13 @@ pub const THREADS: u64 = 50;
 pub const POOL_BUFFER: u64 = 5;
 ```
 
+## Install
+
+Install Rustup for Windows to compile the miner with cargo
+```
+https://www.rust-lang.org/tools/install
+```
+
 ## Build
 
 To build the codebase from scratch, checkout the repo and use cargo to build:
@@ -40,3 +47,10 @@ To build the codebase from scratch, checkout the repo and use cargo to build:
 cargo build --release
 ```
 
+## Run
+Navigate to the target build folder Ex: 'target/release/' in the command prompt.
+
+Run this command to start the miner with your custom settings hard-coded in.
+```
+ore_pool_miner
+```
