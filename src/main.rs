@@ -31,7 +31,7 @@ pub const MINER_PAYOUT_ADDRESS: Pubkey = solana_program::pubkey!("AAAAAAAAAAAAAA
 pub const MINING_POOL_RPC: &str = "REPLACE WITH RPC PROVIDER";
 
 //Default is Alvarium Mining Pool. Change this to your pool's API endpoint
-pub const MINING_POOL_URL: &str = "https://mining.bifrost.technology/submitwork";
+pub const MINING_POOL_URL: &str = "https://alvarium.bifrost.technology/submitwork";
 
 //Update amount of threads
 pub const THREADS: u64 = 50;
