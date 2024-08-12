@@ -1,17 +1,17 @@
 [package]
-name = "ore-pool-miner"
+name = "alvarium-cli"
 version = "1.0.1"
 edition = "2021"
 license = "Apache-2.0"
-description = "A command line interface for ORE cryptocurrency mining."
-documentation = "https://ore.supply"
-homepage = "https://ore.supply"
-repository = "https://github.com/regolith-labs/ore-cli"
+description = "A command line interface for mining the Alvarium Ore Pool on Solana!"
+documentation = "https://github.com/Bifrost-Technologies/ore-pool-miner"
+homepage = "https://github.com/Bifrost-Technologies/ore-pool-miner"
+repository = "https://github.com/Bifrost-Technologies/ore-pool-miner"
 readme = "./README.md"
-keywords = ["solana", "crypto", "mining"]
+keywords = ["solana", "ore", "pool", "crypto", "mining"]
 
 [[bin]]
-name = "ore_pool_miner"
+name = "alvarium"
 path = "src/main.rs"
 
 

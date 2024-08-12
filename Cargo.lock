@@ -118,6 +118,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
 
 [[package]]
+name = "alvarium-cli"
+version = "1.0.1"
+dependencies = [
+ "bincode",
+ "bs58 0.5.1",
+ "bytemuck",
+ "cached",
+ "chrono",
+ "clap 4.5.9",
+ "colored",
+ "drillx",
+ "futures",
+ "log",
+ "num_cpus",
+ "ore-api",
+ "ore-utils",
+ "rand 0.8.5",
+ "reqwest",
+ "solana-cli-config",
+ "solana-client",
+ "solana-program",
+ "solana-rpc-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "spl-associated-token-account",
+ "spl-token",
+ "tokio",
+]
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2649,36 +2679,6 @@ dependencies = [
  "spl-token",
  "static_assertions",
  "thiserror",
-]
-
-[[package]]
-name = "ore-pool-miner"
-version = "1.0.1"
-dependencies = [
- "bincode",
- "bs58 0.5.1",
- "bytemuck",
- "cached",
- "chrono",
- "clap 4.5.9",
- "colored",
- "drillx",
- "futures",
- "log",
- "num_cpus",
- "ore-api",
- "ore-utils",
- "rand 0.8.5",
- "reqwest",
- "solana-cli-config",
- "solana-client",
- "solana-program",
- "solana-rpc-client",
- "solana-sdk",
- "solana-transaction-status",
- "spl-associated-token-account",
- "spl-token",
- "tokio",
 ]
 
 [[package]]

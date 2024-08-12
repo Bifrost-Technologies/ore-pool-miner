@@ -15,7 +15,7 @@ use reqwest::Client;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use solana_rpc_client::spinner;
-use std::time::Duration;
+use std::{time::Duration, env};
 use std::{sync::Arc, time::Instant};
 
 use crate::open::open;
@@ -24,51 +24,52 @@ use crate::utils::{amount_u64_to_string, get_clock, get_config, get_updated_proo
 //Default is Alvarium Mining Pool. You can replace with a different mining pool address
 pub const MINING_POOL: Pubkey = solana_program::pubkey!("Cdh9QF6NmxCxWDEmuusFVkhQSZuVMRXj9nnZQyGraCna");
 
-//MUST BE CHANGED TO RECEIVE PAYOUT. Use your wallet address here
-pub const MINER_PAYOUT_ADDRESS: Pubkey = solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-
-//Replace with your favorite RPC provider
-pub const MINING_POOL_RPC: &str = "REPLACE WITH RPC PROVIDER";
-
 //Default is Alvarium Mining Pool. Change this to your pool's API endpoint
 pub const MINING_POOL_URL: &str = "https://alvarium.bifrost.technology/submitwork";
-
-//Update amount of threads
-pub const THREADS: u64 = 50;
-
-//Keep at 5 for Alvarium Mining Pool. Change this value if the pool requires you to hand in the work sooner
-pub const POOL_BUFFER: u64 = 5;
-
 
 #[tokio::main]
 async fn main() {
     let mut rng = rand::thread_rng();
-
+    let mut miner_rpc: String = String::new();
+    let mut miner_address: Pubkey = solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     let random_depth = rng.gen_range(50..=500);
+    let mut threads: u64 = 50;
+    let mut buffer: u64 = 50;
+    let args: Vec<String> = env::args().collect();
+        
+            if let Ok(value) = args[1].parse::<String>() {
+                miner_rpc = value;
+            }
+            if let Ok(value) = args[2].parse() {
+                miner_address = value;
+            }
+            if let Ok(value) = args[3].parse::<u64>() {
+                threads = value;
+            }
+            if let Ok(value) = args[4].parse::<u64>() {
+                buffer = value;
+            }
+            println!("Miner RPC: {}", miner_rpc);
 
     let settings = Arc::new(Minersettings {
-        _threads: THREADS,
-        _buffer: POOL_BUFFER,
+        _threads: threads,
+        _buffer: buffer,
         _depth: random_depth,
-        _miner: MINER_PAYOUT_ADDRESS,
+        _miner: miner_address,
+        _rpc: miner_rpc
     });
 
     mine(settings).await;
 }
 
-#[no_mangle]
-pub extern "C" fn minepool(_threads: u64, _buffer: u64) {
-    //run through runtime (optional for C lib)
-    //mine(settings);
-}
-
-#[no_mangle]
 pub async fn mine(data: Arc<Minersettings>) {
-    open().await;
+    let quickrpc: RpcClient = RpcClient::new(data._rpc.clone());
+    open(&quickrpc).await;
     let mut _previous_challenge: String = String::new();
     let mut _current_challenge: String = String::new();
+
     loop {
-        let rpc_client: RpcClient = RpcClient::new(MINING_POOL_RPC.to_string());
+        let rpc_client: RpcClient = RpcClient::new(data._rpc.clone());
         let last_hash_at = 0;
         let proof = get_updated_proof_with_authority(&rpc_client, MINING_POOL, last_hash_at).await;
 
@@ -81,7 +82,7 @@ pub async fn mine(data: Arc<Minersettings>) {
         if _current_challenge != _previous_challenge {
 
             // Calc cutoff time
-            let cutoff_time = get_cutoff(proof, data._buffer).await;
+            let cutoff_time = get_cutoff(&rpc_client, proof, data._buffer).await;
 
             // Run drillx
             let config = get_config(&rpc_client).await;
@@ -119,7 +120,7 @@ pub async fn mine(data: Arc<Minersettings>) {
     }
 }
 
-#[no_mangle]
+
 pub async fn find_hash_par(
     proof: Proof,
     cutoff_time: u64,
@@ -214,10 +215,11 @@ pub struct Minersettings {
     _buffer: u64,
     _depth: u64,
     _miner: Pubkey,
+    _rpc: String
 }
 unsafe impl Send for Minersettings {}
 
-#[no_mangle]
+
 pub fn check_num_cores(threads: u64) {
     // Check num threads
     let num_cores = num_cpus::get() as u64;
@@ -231,9 +233,9 @@ pub fn check_num_cores(threads: u64) {
     }
 }
 
-#[no_mangle]
-pub async fn should_reset(config: Config) -> bool {
-    let rpc_client: RpcClient = RpcClient::new(MINING_POOL_RPC.to_string());
+
+pub async fn should_reset(client: &RpcClient, config: Config) -> bool {
+    let rpc_client: &RpcClient = client;
     let clock = get_clock(&rpc_client).await;
     config
         .last_reset_at
@@ -242,9 +244,9 @@ pub async fn should_reset(config: Config) -> bool {
         .le(&clock.unix_timestamp)
 }
 
-#[no_mangle]
-pub async fn get_cutoff(proof: Proof, buffer_time: u64) -> u64 {
-    let rpc_client: RpcClient = RpcClient::new(MINING_POOL_RPC.to_string());
+
+pub async fn get_cutoff(client: &RpcClient, proof: Proof, buffer_time: u64) -> u64 {
+    let rpc_client: &RpcClient = client;
     let clock = get_clock(&rpc_client).await;
     proof
         .last_hash_at
@@ -255,7 +257,6 @@ pub async fn get_cutoff(proof: Proof, buffer_time: u64) -> u64 {
 }
 
 // TODO Pick a better strategy (avoid draining bus)
-#[no_mangle]
 pub fn find_bus() -> Pubkey {
     let i = rand::thread_rng().gen_range(0..BUS_COUNT);
     BUS_ADDRESSES[i]
