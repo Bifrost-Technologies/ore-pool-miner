@@ -86,7 +86,7 @@ pub async fn mine(data: Arc<Minersettings>) {
 
             // Run drillx
             let config = get_config(&rpc_client).await;
-            let (solution, _best_difficulty): (Solution, u32) = find_hash_par(
+            let (solution, _best_difficulty, _performance): (Solution, u32, u64) = find_hash_par(
                 proof,
                 cutoff_time,
                 data._threads,
@@ -102,6 +102,7 @@ pub async fn mine(data: Arc<Minersettings>) {
                 data._miner.to_bytes().as_slice(),
                 proof.challenge.as_slice(),
                 _best_difficulty.to_le_bytes().as_slice(),
+                _performance.to_le_bytes().as_slice()
             ]
             .concat();
 
@@ -127,7 +128,7 @@ pub async fn find_hash_par(
     threads: u64,
     depth: u64,
     min_difficulty: u32,
-) -> (Solution, u32) {
+) -> (Solution, u32, u64) {
     // Dispatch job to each thread
     let progress_bar = Arc::new(spinner::new_progress_bar());
     progress_bar.set_message("Mining...");
@@ -139,7 +140,9 @@ pub async fn find_hash_par(
                 let mut memory = equix::SolverMemory::new();
                 move || {
                     let timer = Instant::now();
+                    
                     let mut nonce = u64::MAX.saturating_div(depth).saturating_mul(i);
+                    let seed = nonce;
                     let mut best_nonce = nonce;
                     let mut best_difficulty = 0;
                     let mut best_hash = Hash::default();
@@ -178,23 +181,25 @@ pub async fn find_hash_par(
                     }
 
                     // Return the best nonce
-                    (best_nonce, best_difficulty, best_hash)
+                    (best_nonce, best_difficulty, best_hash, (nonce - seed))
                 }
             })
         })
         .collect();
 
-    // Join handles and return best nonce
+    // Join handles and return best nonce 
+    let mut total_nonces = 0;
     let mut best_nonce = 0;
     let mut best_difficulty = 0;
     let mut best_hash = Hash::default();
     for h in handles {
-        if let Ok((nonce, difficulty, hash)) = h.join() {
+        if let Ok((nonce, difficulty, hash, count)) = h.join() {
             if difficulty > best_difficulty {
                 best_difficulty = difficulty;
                 best_nonce = nonce;
                 best_hash = hash;
             }
+            total_nonces += count;
         }
     }
 
@@ -208,6 +213,7 @@ pub async fn find_hash_par(
     (
         Solution::new(best_hash.d, best_nonce.to_le_bytes()),
         best_difficulty,
+        total_nonces
     )
 }
 pub struct Minersettings {
