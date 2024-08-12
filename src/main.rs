@@ -233,8 +233,7 @@ pub fn check_num_cores(threads: u64) {
 
 #[no_mangle]
 pub async fn should_reset(config: Config) -> bool {
-    let rpc_url = "https://api.mainnet-beta.solana.com";
-    let rpc_client: RpcClient = RpcClient::new(rpc_url.to_string());
+    let rpc_client: RpcClient = RpcClient::new(MINING_POOL_RPC.to_string());
     let clock = get_clock(&rpc_client).await;
     config
         .last_reset_at
@@ -245,8 +244,7 @@ pub async fn should_reset(config: Config) -> bool {
 
 #[no_mangle]
 pub async fn get_cutoff(proof: Proof, buffer_time: u64) -> u64 {
-    let rpc_url = "https://api.mainnet-beta.solana.com";
-    let rpc_client: RpcClient = RpcClient::new(rpc_url.to_string());
+    let rpc_client: RpcClient = RpcClient::new(MINING_POOL_RPC.to_string());
     let clock = get_clock(&rpc_client).await;
     proof
         .last_hash_at
