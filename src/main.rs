@@ -209,7 +209,7 @@ pub async fn find_hash_par(
         bs58::encode(best_hash.h).into_string(),
         best_difficulty
     ));
-
+    println!("Hash Power: {} H/s | {} H/m", (total_nonces / 55), total_nonces);
     (
         Solution::new(best_hash.d, best_nonce.to_le_bytes()),
         best_difficulty,
