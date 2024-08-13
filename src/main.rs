@@ -37,18 +37,30 @@ async fn main() {
     let mut buffer: u64 = 50;
     let args: Vec<String> = env::args().collect();
         
-            if let Ok(value) = args[1].parse::<String>() {
-                miner_rpc = value;
-            }
-            if let Ok(value) = args[2].parse() {
-                miner_address = value;
-            }
-            if let Ok(value) = args[3].parse::<u64>() {
-                threads = value;
-            }
-            if let Ok(value) = args[4].parse::<u64>() {
-                buffer = value;
-            }
+    if args.len() > 1 {
+        if let Ok(value) = args[1].parse::<String>() {
+            miner_rpc = value;
+        }
+    }
+    if args.len() > 2 {
+        if let Ok(value) = args[2].parse() {
+            miner_address = value;
+        }
+    }
+    if args.len() > 3 {
+        if let Ok(value) = args[3].parse::<u64>() {
+            threads = value;
+        }
+    }
+    if args.len() > 4 {
+        if let Ok(value) = args[4].parse::<u64>() {
+            buffer = value;
+        }else{
+            buffer = 5;
+        }
+    }else{
+        buffer = 5;
+    }
             
 
     mine(threads, buffer, random_depth, miner_address, miner_rpc).await;
