@@ -49,27 +49,19 @@ async fn main() {
             if let Ok(value) = args[4].parse::<u64>() {
                 buffer = value;
             }
-            println!("Miner RPC: {}", miner_rpc);
+            
 
-    let settings = Arc::new(Minersettings {
-        _threads: threads,
-        _buffer: buffer,
-        _depth: random_depth,
-        _miner: miner_address,
-        _rpc: miner_rpc
-    });
-
-    mine(settings).await;
+    mine(threads, buffer, random_depth, miner_address, miner_rpc).await;
 }
 
-pub async fn mine(data: Arc<Minersettings>) {
-    let quickrpc: RpcClient = RpcClient::new(data._rpc.clone());
+pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, _miner: Pubkey, _rpc: String) {
+    let quickrpc: RpcClient = RpcClient::new(_rpc.clone());
     open(&quickrpc).await;
     let mut _previous_challenge: String = String::new();
     let mut _current_challenge: String = String::new();
 
     loop {
-        let rpc_client: RpcClient = RpcClient::new(data._rpc.clone());
+        let rpc_client: RpcClient = RpcClient::new(_rpc.clone());
         let last_hash_at = 0;
         let proof = get_updated_proof_with_authority(&rpc_client, MINING_POOL, last_hash_at).await;
 
@@ -82,15 +74,15 @@ pub async fn mine(data: Arc<Minersettings>) {
         if _current_challenge != _previous_challenge {
 
             // Calc cutoff time
-            let cutoff_time = get_cutoff(&rpc_client, proof, data._buffer).await;
+            let cutoff_time = get_cutoff(&rpc_client, proof, _buffer).await;
 
             // Run drillx
             let config = get_config(&rpc_client).await;
             let (solution, _best_difficulty, _performance): (Solution, u32, u64) = find_hash_par(
                 proof,
                 cutoff_time,
-                data._threads,
-                data._depth,
+                _threads,
+                _depth,
                 config.min_difficulty as u32,
             )
             .await;
@@ -99,7 +91,7 @@ pub async fn mine(data: Arc<Minersettings>) {
             let workhash: Vec<u8> = [
                 solution.d.as_slice(),
                 solution.n.as_slice(),
-                data._miner.to_bytes().as_slice(),
+                _miner.to_bytes().as_slice(),
                 proof.challenge.as_slice(),
                 _best_difficulty.to_le_bytes().as_slice(),
                 _performance.to_le_bytes().as_slice()
