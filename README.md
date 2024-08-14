@@ -9,48 +9,32 @@ Alvarium is currently offline and in testing phase until reward distribution is 
 ### Custom Ore Mining Pool
 There is no open source mining pool API template. A custom API server has to be built in order to use this client
 
-## Modify Settings
-Navigate to main.rs in the src folder and update the constants below
-```
-//Default is Alvarium Mining Pool. You can replace with a different mining pool address
-pub const MINING_POOL: Pubkey = solana_program::pubkey!("Cdh9QF6NmxCxWDEmuusFVkhQSZuVMRXj9nnZQyGraCna");
-
-//MUST BE CHANGED TO RECEIVE PAYOUT. Use your wallet address here
-pub const MINER_PAYOUT_ADDRESS: Pubkey = solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-
-//Replace with your favorite RPC provider
-pub const MINING_POOL_RPC: &str = "REPLACE WITH RPC PROVIDER";
-
-//Default is Alvarium Mining Pool. Change this to your pool's API endpoint
-pub const MINING_POOL_URL: &str = "https://alvarium.bifrost.technology/submitwork";
-
-//Update amount of threads
-pub const THREADS: u64 = 50;
-
-//Keep at 5 for Alvarium Mining Pool. Change this value if the pool requires you to hand in the work sooner
-pub const POOL_BUFFER: u64 = 5;
-```
-
 ## Install
 
 Install Rustup for Windows to compile the miner with cargo
 ```
 https://www.rust-lang.org/tools/install
 ```
+## Dependencies
 
-## Build
+If you run into issues during installation, please install the following dependencies for your operating system and try again:
 
-To build the codebase from scratch, checkout the repo and use cargo to build:
+Linux Only
+```
+sudo apt-get install openssl pkg-config libssl-dev
+```
 
+## Install
+
+To install the alvarium mining client run this command
 
 ```
-cargo build --release
+cargo install alvarium-cli
 ```
 
 ## Run
-Navigate to the target build folder Ex: 'target/release/' in the command prompt.
 
-Run this command to start the miner with your custom settings hard-coded in.
+Run this command to start the miner with your custom settings. Remove brackets and fill in the parameters
 ```
-ore_pool_miner
+alvarium [RPC_LINK] [WALLET_ADDRESS] [THREADS] [BUFFER]
 ```
