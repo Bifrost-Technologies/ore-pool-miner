@@ -169,7 +169,7 @@ pub async fn find_hash_par(
                         }
 
                         // Exit if time has elapsed
-                        if nonce % 100 == 0 {
+                     
                             if timer.elapsed().as_secs().ge(&cutoff_time) {
                                 if best_difficulty.gt(&min_difficulty) {
                                     // Mine until min difficulty has been met
@@ -181,7 +181,7 @@ pub async fn find_hash_par(
                                     cutoff_time.saturating_sub(timer.elapsed().as_secs()),
                                 ));
                             }
-                        }
+                       
 
                         // Increment nonce
                         nonce += 1;
