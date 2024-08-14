@@ -119,7 +119,7 @@ checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
 
 [[package]]
 name = "alvarium-cli"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "bincode",
  "bs58 0.5.1",

@@ -15,14 +15,15 @@ use reqwest::Client;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use solana_rpc_client::spinner;
-use std::{time::Duration, env};
+use std::{env, time::Duration};
 use std::{sync::Arc, time::Instant};
 
 use crate::open::open;
 use crate::utils::{amount_u64_to_string, get_clock, get_config, get_updated_proof_with_authority};
 
 //Default is Alvarium Mining Pool. You can replace with a different mining pool address
-pub const MINING_POOL: Pubkey = solana_program::pubkey!("Cdh9QF6NmxCxWDEmuusFVkhQSZuVMRXj9nnZQyGraCna");
+pub const MINING_POOL: Pubkey =
+    solana_program::pubkey!("Cdh9QF6NmxCxWDEmuusFVkhQSZuVMRXj9nnZQyGraCna");
 
 //Default is Alvarium Mining Pool. Change this to your pool's API endpoint
 pub const MINING_POOL_URL: &str = "https://alvarium.bifrost.technology/submitwork";
@@ -31,12 +32,13 @@ pub const MINING_POOL_URL: &str = "https://alvarium.bifrost.technology/submitwor
 async fn main() {
     let mut rng = rand::thread_rng();
     let mut miner_rpc: String = String::new();
-    let mut miner_address: Pubkey = solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    let mut miner_address: Pubkey =
+        solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     let random_depth = rng.gen_range(50..=500);
     let mut threads: u64 = 50;
-    let mut buffer: u64 = 50;
+    let mut buffer: u64 = 8;
     let args: Vec<String> = env::args().collect();
-        
+
     if args.len() > 1 {
         if let Ok(value) = args[1].parse::<String>() {
             miner_rpc = value;
@@ -55,13 +57,12 @@ async fn main() {
     if args.len() > 4 {
         if let Ok(value) = args[4].parse::<u64>() {
             buffer = value;
-        }else{
-            buffer = 5;
+        } else {
+            buffer = 8;
         }
-    }else{
-        buffer = 5;
+    } else {
+        buffer = 8;
     }
-            
 
     mine(threads, buffer, random_depth, miner_address, miner_rpc).await;
 }
@@ -76,7 +77,11 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, _miner: Pubkey, _rpc
         let rpc_client: RpcClient = RpcClient::new(_rpc.clone());
         let last_hash_at = 0;
         let proof = get_updated_proof_with_authority(&rpc_client, MINING_POOL, last_hash_at).await;
-
+        if _miner == solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") {
+            println!("Wallet Address is not configured correctly!");
+            break;
+        }
+        println!("Wallet Address: {}", _miner.to_string()); 
         println!(
             "\n Mining Pool Stake balance: {} ORE",
             amount_u64_to_string(proof.balance)
@@ -84,7 +89,6 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, _miner: Pubkey, _rpc
         _current_challenge = bs58::encode(proof.challenge.as_slice()).into_string();
         println!("Current Challenge: {}", _current_challenge);
         if _current_challenge != _previous_challenge {
-
             // Calc cutoff time
             let cutoff_time = get_cutoff(&rpc_client, proof, _buffer).await;
 
@@ -106,7 +110,7 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, _miner: Pubkey, _rpc
                 _miner.to_bytes().as_slice(),
                 proof.challenge.as_slice(),
                 _best_difficulty.to_le_bytes().as_slice(),
-                _performance.to_le_bytes().as_slice()
+                _performance.to_le_bytes().as_slice(),
             ]
             .concat();
 
@@ -124,7 +128,6 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, _miner: Pubkey, _rpc
         }
     }
 }
-
 
 pub async fn find_hash_par(
     proof: Proof,
@@ -144,7 +147,7 @@ pub async fn find_hash_par(
                 let mut memory = equix::SolverMemory::new();
                 move || {
                     let timer = Instant::now();
-                    
+
                     let mut nonce = u64::MAX.saturating_div(depth).saturating_mul(i);
                     let seed = nonce;
                     let mut best_nonce = nonce;
@@ -191,7 +194,7 @@ pub async fn find_hash_par(
         })
         .collect();
 
-    // Join handles and return best nonce 
+    // Join handles and return best nonce
     let mut total_nonces = 0;
     let mut best_nonce = 0;
     let mut best_difficulty = 0;
@@ -213,11 +216,15 @@ pub async fn find_hash_par(
         bs58::encode(best_hash.h).into_string(),
         best_difficulty
     ));
-    println!("Hash Power: {} H/s | {} H/m", (total_nonces / 55), total_nonces);
+    println!(
+        "Hash Power: {} H/s | {} H/m",
+        (total_nonces / 55),
+        total_nonces
+    );
     (
         Solution::new(best_hash.d, best_nonce.to_le_bytes()),
         best_difficulty,
-        total_nonces
+        total_nonces,
     )
 }
 pub struct Minersettings {
@@ -225,10 +232,9 @@ pub struct Minersettings {
     _buffer: u64,
     _depth: u64,
     _miner: Pubkey,
-    _rpc: String
+    _rpc: String,
 }
 unsafe impl Send for Minersettings {}
-
 
 pub fn check_num_cores(threads: u64) {
     // Check num threads
@@ -243,7 +249,6 @@ pub fn check_num_cores(threads: u64) {
     }
 }
 
-
 pub async fn should_reset(client: &RpcClient, config: Config) -> bool {
     let rpc_client: &RpcClient = client;
     let clock = get_clock(&rpc_client).await;
@@ -253,7 +258,6 @@ pub async fn should_reset(client: &RpcClient, config: Config) -> bool {
         .saturating_sub(5) // Buffer
         .le(&clock.unix_timestamp)
 }
-
 
 pub async fn get_cutoff(client: &RpcClient, proof: Proof, buffer_time: u64) -> u64 {
     let rpc_client: &RpcClient = client;
