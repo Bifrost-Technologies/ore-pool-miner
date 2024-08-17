@@ -10,6 +10,7 @@ use ore_api::{
     consts::{BUS_ADDRESSES, BUS_COUNT, EPOCH_DURATION},
     state::{Config, Proof},
 };
+use serde::Deserialize;
 use rand::Rng;
 use reqwest::Client;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -36,7 +37,7 @@ async fn main() {
         solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     let random_depth = rng.gen_range(50..=500);
     let mut threads: u64 = 50;
-    let mut buffer: u64 = 8;
+    let mut _buffer: u64 = 8;
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 1 {
@@ -56,39 +57,69 @@ async fn main() {
     }
     if args.len() > 4 {
         if let Ok(value) = args[4].parse::<u64>() {
-            buffer = value;
+            if _buffer >= 11 {
+                _buffer = 10;
+            }else if _buffer <= 6{
+                _buffer = 7;
+            }else{
+                 _buffer = value;
+            }
+           
         } else {
-            buffer = 8;
+            _buffer = 8;
         }
     } else {
-        buffer = 8;
+        _buffer = 8;
     }
 
-    mine(threads, buffer, random_depth, miner_address, miner_rpc).await;
+    mine(threads, _buffer, random_depth, miner_address, miner_rpc).await;
+}
+#[derive(Deserialize)]
+struct BalanceStruct{
+    value: u64
 }
 
-pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, _miner: Pubkey, _rpc: String) {
+
+
+pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, miner: Pubkey, _rpc: String) {
     let quickrpc: RpcClient = RpcClient::new(_rpc.clone());
     open(&quickrpc).await;
     let mut _previous_challenge: String = String::new();
     let mut _current_challenge: String = String::new();
-
+    let mut _previous_balance: u64 = 0;
+    let mut _current_balance: u64 = 0;
+    let mut bad_wallet = false;
+    let mut index = 0;
+       if miner == solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") {
+            println!("Wallet Address is not configured correctly!");
+            bad_wallet = true;
+        }
+        println!("\n Wallet Address: {}",  miner.to_string()); 
     loop {
+        
+        if bad_wallet == true {
+             break;
+        }
+        
+        let webclient = Client::new();
         let rpc_client: RpcClient = RpcClient::new(_rpc.clone());
         let last_hash_at = 0;
         let proof = get_updated_proof_with_authority(&rpc_client, MINING_POOL, last_hash_at).await;
-        if _miner == solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") {
-            println!("Wallet Address is not configured correctly!");
-            break;
-        }
-        println!("Wallet Address: {}", _miner.to_string()); 
-        println!(
-            "\n Mining Pool Stake balance: {} ORE",
-            amount_u64_to_string(proof.balance)
-        );
+      
         _current_challenge = bs58::encode(proof.challenge.as_slice()).into_string();
-        println!("Current Challenge: {}", _current_challenge);
+       
         if _current_challenge != _previous_challenge {
+
+             
+     
+             if index == 0 {
+                println!("\n Current Challenge: {}",  _current_challenge);
+                println!("\n Mining Pool Stake balance: {} ORE", amount_u64_to_string(proof.balance));
+             }else{
+                println!("\n Current Challenge: {}",  _current_challenge.bright_white());
+                println!("\n Mining Pool Stake balance: {} ORE", amount_u64_to_string(proof.balance).bright_cyan());
+             }
+   
             // Calc cutoff time
             let cutoff_time = get_cutoff(&rpc_client, proof, _buffer).await;
 
@@ -107,24 +138,35 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, _miner: Pubkey, _rpc
             let workhash: Vec<u8> = [
                 solution.d.as_slice(),
                 solution.n.as_slice(),
-                _miner.to_bytes().as_slice(),
+                miner.to_bytes().as_slice(),
                 proof.challenge.as_slice(),
                 _best_difficulty.to_le_bytes().as_slice(),
                 _performance.to_le_bytes().as_slice(),
+                _depth.to_le_bytes().as_slice(),
+                _threads.to_le_bytes().as_slice()
             ]
             .concat();
 
-            let webclient = Client::new();
-            //Send the work to the pool to score your work and get payment
-            let _response = webclient
-                .post(MINING_POOL_URL)
-                .json(&bs58::encode(workhash).into_string())
-                .send()
-                .await;
+            submit_work(&webclient, MINING_POOL_URL, &workhash).await;
+            
+            let _balance = get_bank_balance(&webclient, &miner).await;
+            if index == 0 {
+                _previous_balance = _balance;
+                _current_balance = _balance;
+              index += 1;
+            }else{
+                _previous_balance = _current_balance;
+                _current_balance = _balance;
+                let reward = _current_balance - _previous_balance;
+                println!("\n Last Reward: {}", amount_u64_to_string(reward).bright_green());
+            }
             _previous_challenge = _current_challenge;
-        } else {
-            println!("Waiting for new work...");
+
+            println!("\n Waiting for new work...");
             std::thread::sleep(Duration::from_millis(5000));
+        } else {
+            
+            std::thread::sleep(Duration::from_millis(2000));
         }
     }
 }
@@ -212,20 +254,57 @@ pub async fn find_hash_par(
 
     // Update log
     progress_bar.finish_with_message(format!(
-        "Best hash: {} (difficulty: {})",
-        bs58::encode(best_hash.h).into_string(),
-        best_difficulty
+        "\n Best hash: {} (difficulty: {})",
+        bs58::encode(best_hash.h).into_string().bright_cyan(),
+        format!("{}",  best_difficulty).bright_cyan()
     ));
-    println!(
-        "Hash Power: {} H/s | {} H/m",
-        (total_nonces / 55),
-        total_nonces
+ println!(
+        "\n Hash Power: {} H/s | {} H/m",
+        format!("{}", total_nonces / 50).bright_cyan(),
+        format!("{}", total_nonces).bright_cyan()
     );
     (
         Solution::new(best_hash.d, best_nonce.to_le_bytes()),
         best_difficulty,
         total_nonces,
     )
+}
+async fn get_bank_balance(webclient: &Client, miner: &Pubkey) -> u64 {
+    let balance_url = format!("https://alvarium.bifrost.technology/balance?miner={}", miner.to_string());
+    let mut bankbalance: u64 = 0;
+    let resp: Result<BalanceStruct, _> = webclient
+    .get(balance_url)
+    .send()
+    .await
+    .expect("Failed to get response")
+    .json()
+    .await;
+    match resp {
+        Ok(balance) => bankbalance = balance.value,
+        Err(e) => eprintln!("Failed to retrieve bank balance: {:?}", e),
+        
+    }
+     bankbalance
+}
+async fn submit_work(client: &Client, mining_pool_url: &str, workhash: &[u8]) {
+    let response = client
+        .post(mining_pool_url)
+        .json(&bs58::encode(workhash).into_string())
+        .send()
+        .await;
+
+    match response {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                println!("\n Work Submission Received: {}", "true".bright_cyan());
+            } else {
+                println!("\n Work Submission Failed: HTTP {}", resp.status().to_string().bright_red());
+            }
+        }
+        Err(e) => {
+            eprintln!("\n Failed to send request: {:?}", e);
+        }
+    }
 }
 pub struct Minersettings {
     _threads: u64,
