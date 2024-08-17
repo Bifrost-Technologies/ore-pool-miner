@@ -150,7 +150,6 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, miner: Pubkey, _rpc:
             submit_work(&webclient, MINING_POOL_URL, &workhash).await;
             
             let _balance = get_bank_balance(&webclient, &miner).await;
-            println!("\n Bank Balance: {}", amount_u64_to_string(_balance).bright_green());
             if index == 0 {
                 _previous_balance = _balance;
                 _current_balance = _balance;
