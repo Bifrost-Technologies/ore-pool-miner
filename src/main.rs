@@ -35,7 +35,7 @@ async fn main() {
     let mut miner_rpc: String = String::new();
     let mut miner_address: Pubkey =
         solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-    let random_depth = rng.gen_range(50..=500);
+  
     let mut threads: u64 = 50;
     let mut _buffer: u64 = 8;
     let args: Vec<String> = env::args().collect();
@@ -71,7 +71,7 @@ async fn main() {
     } else {
         _buffer = 8;
     }
-
+  let random_depth = rng.gen_range(threads..=1000);
     mine(threads, _buffer, random_depth, miner_address, miner_rpc).await;
 }
 #[derive(Deserialize)]
@@ -299,7 +299,8 @@ async fn submit_work(client: &Client, mining_pool_url: &str, workhash: &[u8]) {
             if resp.status().is_success() {
                 println!("\n Work Submission Received: {}", "true".bright_cyan());
             } else {
-                println!("\n Work Submission Failed: HTTP {}", resp.status().to_string().bright_red());
+                let error_text = resp.text().await.unwrap_or_else(|_| "Failed to read response text".to_string());
+                println!("\n Work Submission Failed: HTTP {} - {}", "400", error_text);
             }
         }
         Err(e) => {
