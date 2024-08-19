@@ -10,6 +10,7 @@ use ore_api::{
     consts::{BUS_ADDRESSES, BUS_COUNT, EPOCH_DURATION},
     state::{Config, Proof},
 };
+use rand::rngs::OsRng;
 use serde::Deserialize;
 use rand::Rng;
 use reqwest::Client;
@@ -31,7 +32,6 @@ pub const MINING_POOL_URL: &str = "https://alvarium.bifrost.technology/submitwor
 
 #[tokio::main]
 async fn main() {
-    let mut rng = rand::thread_rng();
     let mut miner_rpc: String = String::new();
     let mut miner_address: Pubkey =
         solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
@@ -71,7 +71,8 @@ async fn main() {
     } else {
         _buffer = 8;
     }
-  let random_depth = rng.gen_range(1..=100);
+    let mut rng = OsRng;
+  let random_depth = rng.gen_range(1..=1000);
     mine(threads, _buffer, random_depth, miner_address, miner_rpc).await;
 }
 #[derive(Deserialize)]
@@ -89,6 +90,7 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, miner: Pubkey, _rpc:
     let mut _previous_balance: u64 = 0;
     let mut _current_balance: u64 = 0;
     let mut bad_wallet = false;
+    
     let mut index = 0;
        if miner == solana_program::pubkey!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA") {
             println!("Wallet Address is not configured correctly!");
