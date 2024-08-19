@@ -185,7 +185,7 @@ pub async fn find_hash_par(
 ) -> (Solution, u32, u64) {
     // Dispatch job to each thread
     let progress_bar = Arc::new(spinner::new_progress_bar());
-    let challenge_region = u64::MAX.saturating_div(100).saturating_mul(depth);
+    let challenge_region = u64::MAX.saturating_div(1000).saturating_mul(depth);
     progress_bar.set_message("Mining...");
     let handles: Vec<_> = (0..threads)
         .map(|i| {
