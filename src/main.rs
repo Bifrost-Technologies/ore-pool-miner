@@ -71,7 +71,7 @@ async fn main() {
     } else {
         _buffer = 8;
     }
-  let random_depth = rng.gen_range(threads..=1000);
+  let random_depth = rng.gen_range(1..=100);
     mine(threads, _buffer, random_depth, miner_address, miner_rpc).await;
 }
 #[derive(Deserialize)]
@@ -110,8 +110,6 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, miner: Pubkey, _rpc:
        
         if _current_challenge != _previous_challenge {
 
-             
-     
              if index == 0 {
                 println!("\n Current Challenge: {}",  _current_challenge);
                 println!("\n Mining Pool Stake balance: {} ORE", amount_u64_to_string(proof.balance));
@@ -121,8 +119,12 @@ pub async fn mine(_threads: u64, _buffer: u64, _depth: u64, miner: Pubkey, _rpc:
              }
    
             // Calc cutoff time
-            let cutoff_time = get_cutoff(&rpc_client, proof, _buffer).await;
-
+            let mut cutoff_time = get_cutoff(&rpc_client, proof, _buffer).await;
+            
+            if cutoff_time > 55 {
+                std::thread::sleep(Duration::from_millis(500));
+                cutoff_time = get_cutoff(&rpc_client, proof, _buffer).await;
+            }
             // Run drillx
             let config = get_config(&rpc_client).await;
             let (solution, _best_difficulty, _performance): (Solution, u32, u64) = find_hash_par(
@@ -181,6 +183,7 @@ pub async fn find_hash_par(
 ) -> (Solution, u32, u64) {
     // Dispatch job to each thread
     let progress_bar = Arc::new(spinner::new_progress_bar());
+    let challenge_region = u64::MAX.saturating_div(100).saturating_mul(depth);
     progress_bar.set_message("Mining...");
     let handles: Vec<_> = (0..threads)
         .map(|i| {
@@ -190,8 +193,7 @@ pub async fn find_hash_par(
                 let mut memory = equix::SolverMemory::new();
                 move || {
                     let timer = Instant::now();
-
-                    let mut nonce = u64::MAX.saturating_div(depth).saturating_mul(i);
+                    let mut nonce = challenge_region.saturating_div(threads).saturating_mul(i);
                     let seed = nonce;
                     let mut best_nonce = nonce;
                     let mut best_difficulty = 0;
@@ -300,7 +302,7 @@ async fn submit_work(client: &Client, mining_pool_url: &str, workhash: &[u8]) {
                 println!("\n Work Submission Received: {}", "true".bright_cyan());
             } else {
                 let error_text = resp.text().await.unwrap_or_else(|_| "Failed to read response text".to_string());
-                println!("\n Work Submission Failed: HTTP {} - {}", "400", error_text);
+                println!("\n Work Submission Failed: HTTP {} - {}", "400", error_text.bright_red());
             }
         }
         Err(e) => {
