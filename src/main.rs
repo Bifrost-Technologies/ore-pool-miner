@@ -72,7 +72,7 @@ async fn main() {
         _buffer = 8;
     }
     let mut rng = OsRng;
-  let random_depth = rng.gen_range(1..=1000);
+  let random_depth = rng.gen_range(1..=400);
     mine(threads, _buffer, random_depth, miner_address, miner_rpc).await;
 }
 #[derive(Deserialize)]
@@ -185,7 +185,7 @@ pub async fn find_hash_par(
 ) -> (Solution, u32, u64) {
     // Dispatch job to each thread
     let progress_bar = Arc::new(spinner::new_progress_bar());
-    let challenge_region = u64::MAX.saturating_div(1000).saturating_mul(depth);
+    let challenge_region = u64::MAX.saturating_div(400).saturating_mul(depth);
     progress_bar.set_message("Mining...");
     let handles: Vec<_> = (0..threads)
         .map(|i| {
