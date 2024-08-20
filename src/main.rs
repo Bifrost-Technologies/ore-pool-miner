@@ -29,7 +29,7 @@ pub const MINING_POOL: Pubkey =
 
 //Default is Alvarium Mining Pool. Change this to your pool's API endpoint
 pub const MINING_POOL_URL: &str = "https://alvarium.bifrost.technology/submitwork";
-
+pub static mut DEBUG: bool = false;
 #[tokio::main]
 async fn main() {
     let mut miner_rpc: String = String::new();
@@ -70,7 +70,23 @@ async fn main() {
         }
     } else {
         _buffer = 8;
+    }if args.len() > 5 {
+        if let Ok(value) = args[5].parse::<u64>() {
+            if value == 0 {
+                unsafe {
+                DEBUG = false;}
+            }
+            if value == 1 {
+                unsafe {
+                DEBUG = true;}
+            }
+           
+        }else {
+            unsafe {
+            DEBUG = false;}
+        }
     }
+  
     let mut rng = OsRng;
   let random_depth = rng.gen_range(1..=400);
     mine(threads, _buffer, random_depth, miner_address, miner_rpc).await;
@@ -185,7 +201,17 @@ pub async fn find_hash_par(
 ) -> (Solution, u32, u64) {
     // Dispatch job to each thread
     let progress_bar = Arc::new(spinner::new_progress_bar());
-    let challenge_region = u64::MAX.saturating_div(400).saturating_mul(depth);
+    let challenge_region_ceiling = u64::MAX.saturating_div(400).saturating_mul(depth + 1);
+    let challenge_region_base = u64::MAX.saturating_div(400).saturating_mul(depth);
+    let challenge_void = challenge_region_ceiling.saturating_sub(challenge_region_base);
+    unsafe {
+        if DEBUG == true{
+        println!("\n Challenge Region ID: {}", depth);
+        println!("\n Challenge Region Ceiling: {}", challenge_region_ceiling);
+        println!("\n Challenge Region Base: {}", challenge_region_base);
+        println!("\n Challenge Region Range: {}", challenge_void);
+        }
+    }
     progress_bar.set_message("Mining...");
     let handles: Vec<_> = (0..threads)
         .map(|i| {
@@ -195,8 +221,14 @@ pub async fn find_hash_par(
                 let mut memory = equix::SolverMemory::new();
                 move || {
                     let timer = Instant::now();
-                    let mut nonce = challenge_region.saturating_div(threads).saturating_mul(i);
+                    let region_slice = challenge_void.saturating_div(threads).saturating_mul(i + 1);
+                    let mut nonce = challenge_region_base.saturating_add(region_slice);
                     let seed = nonce;
+                    unsafe {
+                        if DEBUG == true{
+                            println!("\n Thread Seed: {}", seed);
+                        }
+                    }
                     let mut best_nonce = nonce;
                     let mut best_difficulty = 0;
                     let mut best_hash = Hash::default();
