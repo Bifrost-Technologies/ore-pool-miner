@@ -1,6 +1,6 @@
 [package]
 name = "alvarium-cli"
-version = "1.2.7"
+version = "1.2.8"
 edition = "2021"
 license = "Apache-2.0"
 description = "A command line interface for mining the Alvarium Ore Pool on Solana!"
@@ -27,7 +27,7 @@ cached = "0.46.1"
 chrono = "0.4.38"
 clap = { version = "4.4.12", features = ["derive"] }
 colored = "2.0"
-drillx = "2.0.0"
+drillx_2 = "1.0.0"
 futures = "0.3.30"
 log = "0.4"
 num_cpus = "1.16.0"

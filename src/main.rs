@@ -2,7 +2,7 @@ mod busses;
 mod open;
 mod utils;
 use colored::*;
-use drillx::{
+use drillx_2::{
     equix::{self},
     Hash, Solution,
 };
@@ -234,7 +234,7 @@ pub async fn find_hash_par(
                     let mut best_hash = Hash::default();
                     loop {
                         // Create hash
-                        if let Ok(hx) = drillx::hash_with_memory(
+                        if let Ok(hx) = drillx_2::hash_with_memory(
                             &mut memory,
                             &proof.challenge,
                             &nonce.to_le_bytes(),
