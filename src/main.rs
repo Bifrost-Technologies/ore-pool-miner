@@ -3,13 +3,14 @@ mod open;
 mod utils;
 use colored::*;
 use drillx::{
-    equix::{self},
-    Hash, Solution,
+    equix::{self, SolutionArray},
+    Hash, Solution, DrillxError, seed,
 };
 use ore_api::{
     consts::{BUS_ADDRESSES, BUS_COUNT, EPOCH_DURATION},
     state::{Config, Proof},
 };
+use sha3::Digest;
 use rand::rngs::OsRng;
 use serde::Deserialize;
 use rand::Rng;
@@ -232,13 +233,11 @@ pub async fn find_hash_par(
                     let mut best_nonce = nonce;
                     let mut best_difficulty = 0;
                     let mut best_hash = Hash::default();
+                    let mut total_hashes: u64 = 0;
                     loop {
                         // Create hash
-                        if let Ok(hx) = drillx::hash_with_memory(
-                            &mut memory,
-                            &proof.challenge,
-                            &nonce.to_le_bytes(),
-                        ) {
+                        for hx in  get_hashes_with_memory(&mut memory, &proof.challenge, &nonce.to_le_bytes()) {
+                            total_hashes += 1;
                             let difficulty = hx.difficulty();
                             if difficulty.gt(&best_difficulty) {
                                 best_nonce = nonce;
@@ -246,6 +245,7 @@ pub async fn find_hash_par(
                                 best_hash = hx;
                             }
                         }
+
 
                         // Exit if time has elapsed
                      
@@ -267,19 +267,20 @@ pub async fn find_hash_par(
                     }
 
                     // Return the best nonce
-                    (best_nonce, best_difficulty, best_hash, (nonce - seed))
+                    Some((best_nonce, best_difficulty, best_hash, total_hashes))
                 }
             })
         })
         .collect();
 
     // Join handles and return best nonce
+    
     let mut total_nonces = 0;
     let mut best_nonce = 0;
     let mut best_difficulty = 0;
     let mut best_hash = Hash::default();
     for h in handles {
-        if let Ok((nonce, difficulty, hash, count)) = h.join() {
+        if let Ok(Some((nonce, difficulty, hash, count))) = h.join() {
             if difficulty > best_difficulty {
                 best_difficulty = difficulty;
                 best_nonce = nonce;
@@ -297,7 +298,7 @@ pub async fn find_hash_par(
     ));
  println!(
         "\n Hash Power: {} H/s | {} H/m",
-        format!("{}", total_nonces / 50).bright_cyan(),
+        format!("{}", total_nonces.saturating_div(50)).bright_cyan(),
         format!("{}", total_nonces).bright_cyan()
     );
     (
@@ -353,6 +354,62 @@ pub struct Minersettings {
 }
 unsafe impl Send for Minersettings {}
 
+/// Generates drillx hashes from a challenge and nonce using pre-allocated memory.
+#[inline(always)]
+pub fn get_hashes_with_memory(
+    memory: &mut equix::SolverMemory,
+    challenge: &[u8; 32],
+    nonce: &[u8; 8],
+) -> Vec<Hash> {
+    let mut hashes: Vec<Hash> = Vec::with_capacity(7);
+    if let Ok(solutions) = get_digests_with_memory(memory, challenge, nonce) {
+        for solution in solutions {
+            let digest = solution.to_bytes();
+            hashes.push(Hash {
+                d: digest,
+                h: hashv(&digest, nonce),
+            });
+        }
+    }
+
+    hashes
+}
+
+/// Sorts the provided digest as a list of u16 values.
+#[inline(always)]
+fn sorted(mut digest: [u8; 16]) -> [u8; 16] {
+    unsafe {
+        let u16_slice: &mut [u16; 8] = core::mem::transmute(&mut digest);
+        u16_slice.sort_unstable();
+        digest
+    }
+}
+
+/// Calculates a hash from the provided digest and nonce.
+/// The digest is sorted prior to hashing to prevent malleability.
+#[cfg(not(feature = "solana"))]
+#[inline(always)]
+fn hashv(digest: &[u8; 16], nonce: &[u8; 8]) -> [u8; 32] {
+    let mut hasher = sha3::Keccak256::new();
+    hasher.update(&sorted(*digest));
+    hasher.update(nonce);
+    hasher.finalize().into()
+}
+
+/// Constructs a keccak digest from a challenge and nonce using equix hashes and pre-allocated memory.
+#[inline(always)]
+fn get_digests_with_memory(
+    memory: &mut equix::SolverMemory,
+    challenge: &[u8; 32],
+    nonce: &[u8; 8],
+) -> Result<SolutionArray, DrillxError> {
+    let seed = seed(challenge, nonce);
+    let equix = equix::EquiXBuilder::new()
+        .runtime(equix::RuntimeOption::TryCompile)
+        .build(&seed)
+        .map_err(|_| DrillxError::BadEquix)?;
+    Ok(equix.solve_with_memory(memory))
+}
 pub fn check_num_cores(threads: u64) {
     // Check num threads
     let num_cores = num_cpus::get() as u64;
