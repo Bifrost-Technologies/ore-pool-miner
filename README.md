@@ -4,10 +4,14 @@
 ### Default Ore Mining Pool
 Alvarium Mining Pool is operated by Bifrost and is the default pool option for the mining client.
 
-Alvarium is currently offline and in testing phase until reward distribution is fully tested.
-
 ### Custom Ore Mining Pool
-There is no open source mining pool API template. A custom API server has to be built in order to use this client
+There is no open source mining pool API template. A custom API server has to be built in order to use this client.
+
+Here are some tools to get started: 
+
+[Solnet.Ore](https://github.com/Bifrost-Technologies/Solnet.Ore) C# Ore SDK & Client
+
+[Solnet](https://github.com/bmresearch/Solnet) C# Solana SDK & Client
 
 ## Install
 
